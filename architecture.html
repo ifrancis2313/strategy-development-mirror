@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>strategy-development — pipeline architecture</title>
+<style>
+  :root {
+    --surface-1:      #fcfcfb;
+    --page:           #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --border:         rgba(11,11,11,0.10);
+
+    --wing-1: #2a78d6; /* Ingestion — blue */
+    --wing-2: #1baf7a; /* Testing — aqua */
+    --wing-3: #eda100; /* Shadow — yellow */
+    --gate:   #4a3aa7; /* Confirmation / Graduation gates — violet */
+    --downstream: #898781; /* Pipeline — muted, outside this mirror's scope */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-1:      #1a1a19;
+      --page:           #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --border:         rgba(255,255,255,0.10);
+
+      --wing-1: #3987e5;
+      --wing-2: #199e70;
+      --wing-3: #c98500;
+      --gate:   #9085e9;
+      --downstream: #898787;
+    }
+  }
+  :root[data-theme="dark"] {
+    --surface-1: #1a1a19; --page: #0d0d0d; --text-primary: #ffffff;
+    --text-secondary: #c3c2b7; --text-muted: #898781; --gridline: #2c2c2a;
+    --border: rgba(255,255,255,0.10);
+    --wing-1: #3987e5; --wing-2: #199e70; --wing-3: #c98500; --gate: #9085e9; --downstream: #898787;
+  }
+  :root[data-theme="light"] {
+    --surface-1: #fcfcfb; --page: #f9f9f7; --text-primary: #0b0b0b;
+    --text-secondary: #52514e; --text-muted: #898781; --gridline: #e1e0d9;
+    --border: rgba(11,11,11,0.10);
+    --wing-1: #2a78d6; --wing-2: #1baf7a; --wing-3: #eda100; --gate: #4a3aa7; --downstream: #898781;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .wrap {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+  header { margin-bottom: 40px; }
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 650;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.55;
+    max-width: 640px;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px 10px;
+    margin-bottom: 14px;
+  }
+
+  .flow {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+  .stage-group { display: flex; align-items: center; flex: 0 0 auto; }
+
+  .card {
+    flex: 0 0 auto;
+    width: 220px;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 16px;
+    position: relative;
+  }
+  .card .accent {
+    width: 28px; height: 4px; border-radius: 4px;
+    margin-bottom: 12px;
+  }
+  .card h3 {
+    font-size: 0.98rem;
+    margin: 0 0 6px;
+    font-weight: 650;
+  }
+  .card p {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0 0 10px;
+  }
+  .card .modules {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  .gate {
+    flex: 0 0 auto;
+    width: 132px;
+    text-align: center;
+    padding: 0 6px;
+  }
+  .gate .pill {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 650;
+    color: var(--gate);
+    border: 1.5px solid var(--gate);
+    border-radius: 999px;
+    padding: 4px 10px;
+    margin-bottom: 4px;
+    white-space: nowrap;
+  }
+  .gate .label {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+  .arrow {
+    flex: 0 0 auto;
+    width: 28px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+  }
+
+  .downstream .accent { background: var(--downstream); }
+  .downstream h3 { color: var(--text-secondary); }
+  .downstream {
+    border-style: dashed;
+    opacity: 0.85;
+  }
+
+  section.legend-note {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin: 6px 0 40px;
+  }
+
+  h2 {
+    font-size: 1.05rem;
+    font-weight: 650;
+    margin: 40px 0 14px;
+  }
+  .scope-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 640px) {
+    .scope-grid { grid-template-columns: 1fr; }
+  }
+  .scope-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 18px;
+  }
+  .scope-card h4 {
+    font-size: 0.85rem;
+    margin: 0 0 10px;
+    font-weight: 650;
+  }
+  .scope-card.in h4::before { content: "\2713  "; color: #0ca30c; }
+  .scope-card.out h4::before { content: "\2717  "; color: #d03b3b; }
+  .scope-card ul {
+    margin: 0; padding-left: 18px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+
+  footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid var(--gridline);
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="badge">infra mirror — no strategies, no results, no data</div>
+    <h1>strategy-development: pipeline architecture</h1>
+    <div class="subtitle">
+      Three sequential wings, each with its own trust level and data regime.
+      A strategy moves through exactly one path: research is allowed to be
+      wrong in Testing; nothing reaches Shadow or a downstream Pipeline
+      without an explicit, one-way Graduation.
+    </div>
+  </header>
+
+  <div class="flow">
+    <div class="stage-group">
+      <div class="card">
+        <div class="accent" style="background:var(--wing-1)"></div>
+        <h3>Ingestion</h3>
+        <p>Scrapes and stores market data, serving both this pipeline's own research and any downstream system that needs a shared source.</p>
+        <div class="modules">ingestion/<br/>supabase_client.py<br/>schema.py &middot; clean.py</div>
+      </div>
+    </div>
+    <div class="arrow">&#8594;</div>
+
+    <div class="stage-group">
+      <div class="card">
+        <div class="accent" style="background:var(--wing-2)"></div>
+        <h3>Testing</h3>
+        <p>Backtest + statistical validation: MCPT / PBO robustness, walk-forward validation, strategy-agnostic engine.</p>
+        <div class="modules">testing/engine/<br/>testing/monte_carlo/<br/>testing/validation/</div>
+      </div>
+    </div>
+
+    <div class="gate">
+      <div class="pill">Confirmation</div>
+      <div class="label">one-shot check<br/>vs. untouched data</div>
+    </div>
+    <div class="arrow">&#8594;</div>
+
+    <div class="stage-group">
+      <div class="card">
+        <div class="accent" style="background:var(--wing-3)"></div>
+        <h3>Shadow</h3>
+        <p>Live-but-not-real-money proving. Structurally cannot place a real order — no order-placement class exists under this directory.</p>
+        <div class="modules">shadow/execution.py<br/>shadow/ledger.py<br/>shadow/brokers/</div>
+      </div>
+    </div>
+
+    <div class="gate">
+      <div class="pill">Graduation</div>
+      <div class="label">frozen, versioned<br/>snapshot + manifest</div>
+    </div>
+    <div class="arrow">&#8594;</div>
+
+    <div class="stage-group">
+      <div class="card downstream">
+        <div class="accent"></div>
+        <h3>Pipeline</h3>
+        <p>Real capital, real orders. Outside this repo entirely — a strategy arrives as a new Sleeve only after Graduation.</p>
+        <div class="modules">not part of this mirror</div>
+      </div>
+    </div>
+  </div>
+  <div class="legend-note">Scroll horizontally on narrow screens. Dashed card = outside this repo's scope.</div>
+
+  <h2>What this mirror includes</h2>
+  <div class="scope-grid">
+    <div class="scope-card in">
+      <h4>In scope</h4>
+      <ul>
+        <li>The Testing engine: position/leg modeling, strike selection, backtest driver, MCPT/PBO, walk-forward validation</li>
+        <li>The graduation mechanism (frozen snapshots, dependency-closure resolution, zero live coupling)</li>
+        <li>The Shadow mechanism: execution math, capture-fraction ledger, read-only broker clients</li>
+        <li>Ingestion: scraping + schema + storage code</li>
+        <li>Architecture decisions (docs/adr/) and the full test suite behind all of the above</li>
+      </ul>
+    </div>
+    <div class="scope-card out">
+      <h4>Deliberately excluded</h4>
+      <ul>
+        <li>Every strategy implementation (signal, entry/exit logic, tuned parameters)</li>
+        <li>Every backtest result — no Sharpe, no P&amp;L, no p-values tied to a real run</li>
+        <li>Market data of any kind</li>
+        <li>Anything already graduated to Shadow or a live Pipeline</li>
+        <li>Deploy/composition scripts tied to a specific live deployment</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer>
+    testing/strategies/toy_example/ is a synthetic fixture used only by the graduation-mechanism tests — not a real strategy, and unrelated to anything actually researched in the private repo this was mirrored from.
+  </footer>
+
+</div>
+</body>
+</html>
