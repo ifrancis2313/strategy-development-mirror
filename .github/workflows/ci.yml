@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      # requirements-lock.txt (pip freeze output), not requirements.txt --
+      # the loose >= bounds in requirements.txt mean two `pip install` runs
+      # months apart aren't guaranteed to resolve the same actual versions,
+      # so CI wouldn't be testing a fixed, reproducible dependency graph
+      # over time. requirements.txt stays the human-edited source of truth
+      # (what packages, roughly what versions); requirements-lock.txt is
+      # regenerated (`pip freeze > requirements-lock.txt`) whenever it's
+      # deliberately updated. Portable across platforms despite being
+      # generated on macOS -- pip resolves the Linux wheel for the same
+      # name==version pin at install time; no platform-locked packages in
+      # this dependency set.
+      - name: Install dependencies
+        run: pip install -r requirements-lock.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Type-check (mypy)
+        run: mypy .
+
+      - name: Dependency vulnerability scan (pip-audit)
+        run: pip-audit -r requirements-lock.txt --progress-spinner=off
+
+      # DATABASE_URL is deliberately never set here: tests/test_supabase_
+      # client.py skips its live-DB test via `"DATABASE_URL" not in
+      # os.environ` -- checking key presence, not truthiness, so setting it
+      # to an empty string would NOT skip and would instead try (and fail)
+      # a real connection. Leaving it genuinely unset is what makes it skip
+      # gracefully rather than needing a live connection to the shared
+      # Supabase project. Similarly, the AGPL-vendored pypbo-cscv tests
+      # (tests/testing/monte_carlo/test_pbo.py) skip on their own since
+      # that sibling repo isn't checked out here -- no CI-specific config
+      # needed for either.
+      - name: Test (pytest)
+        run: pytest -q

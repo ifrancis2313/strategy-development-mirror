@@ -1,0 +1,37 @@
+[tool.ruff]
+line-length = 110
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.13"
+ignore_missing_imports = true
+check_untyped_defs = true
+warn_unused_ignores = true
+exclude = ["tests/", "scripts/"]
+
+[tool.mutmut]
+# Scoped to match the 2026-07-12 front-to-back review: testing/ (excluding
+# testing/strategies/, out of scope per Zi's call) + shadow/ + ingestion/.
+source_paths = ["testing", "shadow", "ingestion"]
+# do_not_mutate is a file-path glob (fnmatch); do_not_mutate_patterns (a
+# different key) is a per-line content regex, not a path filter -- using
+# the latter here silently mutated testing/strategies/ anyway on the first
+# run (caught by checking the results afterward).
+do_not_mutate = ["testing/strategies/*"]
+# scripts/ isn't in mutation scope, but tests/shadow/test_graduated_options_daily_check.py
+# imports from it -- needs to exist in mutmut's sandbox for that test to collect.
+also_copy = ["scripts"]
+
+[tool.pytest.ini_options]
+# Scopes discovery to the real test suite. Without this, pytest's default
+# *_test.py glob also matches several scripts/ files (research/diagnostic
+# scripts, never meant to be pytest-discovered) that import `testing.*` in
+# ways that only resolve when scripts/ itself is on sys.path -- not a real
+# test suite concern, just an accidental naming collision. Found via a CI
+# failure (2026-07-12): scripts/iron_butterfly_test.py and friends got
+# collected and failed with ModuleNotFoundError.
+testpaths = ["tests"]
