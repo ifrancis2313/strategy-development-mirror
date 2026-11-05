@@ -34,3 +34,7 @@ pytest -q
 ```
 
 No market data or credentials required — everything here runs against synthetic fixtures.
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE).

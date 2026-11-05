@@ -14,10 +14,9 @@ a real edge exists among the candidates (see this module's own tests, and
 the reference benchmark noted below).
 
 **License note.** This wraps a vendored, trimmed copy of `esvhd/pypbo`
-(https://github.com/esvhd/pypbo) at
-`~/Documents/Pycharm/research-methodology/vendored/pypbo-cscv/pbo.py`, which
-is **GNU AGPL-3.0** -- not the MIT/Apache/BSD every other dependency in this
-repo uses. Reviewed and vendored 2026-07-07 (see that directory's own
+(https://github.com/esvhd/pypbo) from a local checkout, which is **GNU
+AGPL-3.0** -- not the MIT/Apache/BSD every other dependency in this repo
+uses. Reviewed and vendored 2026-07-07 (see that directory's own
 `SOURCE.md` for origin commit, trim notes, and a synthetic noise-vs-real-edge
 benchmark: pure noise scores PBO ~0.52, a panel with genuine edge among the
 candidates scores ~0.26-0.29, both at the literature-standard S=16). AGPL is
@@ -42,25 +41,38 @@ from math import comb
 import numpy as np
 import pandas as pd
 
-_VENDORED_PYPBO_DIR = os.path.expanduser("~/Documents/Pycharm/research-methodology/vendored/pypbo-cscv")
+_DEFAULT_VENDORED_PYPBO_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "vendored", "pypbo-cscv")
+)
+_VENDORED_PYPBO_DIR = os.path.expanduser(
+    os.environ.get("PYPBO_CSCV_DIR", _DEFAULT_VENDORED_PYPBO_DIR)
+)
 
 
-def _load_vendored_pypbo():
-    """Imports the vendored `pbo` module from its one existing location,
+def _load_vendored_pypbo(vendored_dir: str | None = None):
+    """Imports the vendored `pbo` module from a configurable location,
     inserting that directory onto `sys.path` on first use only. Raises a
     clear `ImportError` (rather than a confusing `ModuleNotFoundError` deep
-    in `pypbo`'s own code) if that vendored checkout isn't present on this
-    machine.
+    in `pypbo`'s own code) if that vendored checkout isn't present.
+
+    The location can be passed explicitly or set through `PYPBO_CSCV_DIR`;
+    otherwise the repository-relative `vendored/pypbo-cscv` directory is
+    used.
     """
-    if not os.path.isdir(_VENDORED_PYPBO_DIR):
+    vendored_dir = os.path.abspath(
+        os.path.expanduser(
+            vendored_dir or os.environ.get("PYPBO_CSCV_DIR", _VENDORED_PYPBO_DIR)
+        )
+    )
+    if not os.path.isdir(vendored_dir):
         raise ImportError(
-            f"Vendored pypbo-cscv not found at {_VENDORED_PYPBO_DIR!r}. "
+            f"Vendored pypbo-cscv not found at {vendored_dir!r}. "
             "See research-methodology/vendored/pypbo-cscv/SOURCE.md for provenance; "
             "this module intentionally does not vendor a second copy (AGPL-3.0, see this "
             "module's docstring)."
         )
-    if _VENDORED_PYPBO_DIR not in sys.path:
-        sys.path.insert(0, _VENDORED_PYPBO_DIR)
+    if vendored_dir not in sys.path:
+        sys.path.insert(0, vendored_dir)
     import pbo as vendored_pbo
 
     return vendored_pbo
