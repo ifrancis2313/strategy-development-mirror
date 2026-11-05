@@ -38,3 +38,7 @@ No market data or credentials required — everything here runs against syntheti
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE).
+
+The PBO implementation is an external AGPL-3.0 dependency and is not included.
+Pass its checkout path as `vendored_pypbo_dir` to
+`probability_of_backtest_overfitting()` or set `PYPBO_CSCV_DIR`.

@@ -156,3 +156,27 @@ def test_missing_vendored_pypbo_raises_a_clear_import_error(monkeypatch):
 
     with pytest.raises(ImportError, match="Vendored pypbo-cscv not found"):
         probability_of_backtest_overfitting(panel, s_chunks=16)
+
+
+def test_vendored_pypbo_directory_is_configurable_through_public_api(monkeypatch, tmp_path):
+    import testing.monte_carlo.pbo as pbo_module
+
+    requested_dir = str(tmp_path)
+    loaded_dirs = []
+
+    class FakePypbo:
+        @staticmethod
+        def pbo(*args, **kwargs):
+            return type("FakeResult", (), {"pbo": 0.25, "prob_oos_loss": 0.5})()
+
+    def fake_loader(vendored_dir=None):
+        loaded_dirs.append(vendored_dir)
+        return FakePypbo
+
+    monkeypatch.setattr(pbo_module, "_load_vendored_pypbo", fake_loader)
+    panel = pd.DataFrame(np.random.default_rng(7).normal(size=(32, 2)))
+
+    result = probability_of_backtest_overfitting(panel, s_chunks=16, vendored_pypbo_dir=requested_dir)
+
+    assert loaded_dirs == [requested_dir]
+    assert result.pbo == 0.25

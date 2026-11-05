@@ -113,6 +113,7 @@ def probability_of_backtest_overfitting(
     s_chunks: int = 16,
     periods_per_year: float = 252.0,
     threshold: float = 0.0,
+    vendored_pypbo_dir: str | None = None,
 ) -> PBOResult:
     """CSCV/PBO over a plain returns matrix.
 
@@ -130,7 +131,8 @@ def probability_of_backtest_overfitting(
     `s_chunks` must be even (literature-standard default 16, `C(16, 8) =
     12,870` combinations); `threshold` is the out-of-sample cutoff for
     `prob_oos_loss` (0.0 for Sharpe = "probability of an out-of-sample
-    loss").
+    loss). `vendored_pypbo_dir` selects the external pypbo-cscv checkout;
+    when omitted, `PYPBO_CSCV_DIR` or the repository-relative default is used.
 
     Raises `ValueError` if fewer than 2 columns are given, or too few clean
     rows remain for the requested `s_chunks`.
@@ -148,7 +150,7 @@ def probability_of_backtest_overfitting(
             f"need >= {s_chunks * 2} for s_chunks={s_chunks}"
         )
 
-    vendored_pbo = _load_vendored_pypbo()
+    vendored_pbo = _load_vendored_pypbo(vendored_pypbo_dir)
     metric = _annualized_sharpe_metric(periods_per_year)
     result = vendored_pbo.pbo(clean, S=s_chunks, metric_func=metric, threshold=threshold)
 
