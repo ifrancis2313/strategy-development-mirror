@@ -6,6 +6,18 @@ This is a curated, hand-picked mirror of the research/testing infrastructure fro
 
 Still searching for that first strategy validated end-to-end through this pipeline. More to come.
 
+## Quick demo
+
+```sh
+python -m examples.synthetic_demo
+```
+
+After installing the pinned dependencies (see Running it), this offline command runs in under a minute on seeded synthetic prices: a toy moving-average rule, rolling walk-forward folds, and sign-permutation Monte Carlo tests. It writes only to stdout and needs no data files or credentials. Toy observations omit fills and trading costs.
+
+SYNTHETIC DATA — demonstrates the validation machinery; not a strategy or a result.
+
+By default, PBO and the graduation gate print an explicit skip because the external implementation is excluded. To enable both, point to an existing external checkout through the mechanism in [License](#license).
+
 ## What's here
 
 Three sequential "wings," each with a different trust level and data regime:
