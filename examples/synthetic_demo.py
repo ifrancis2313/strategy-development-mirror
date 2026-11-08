@@ -50,6 +50,10 @@ def main(argv: list[str] | None = None) -> None:
     print(DISCLAIMER)
     print(f"Seed: {args.seed}; toy moving-average lookbacks: {LOOKBACKS}")
     print("Synthetic unit-notional observations only; no fills or trading costs modeled.")
+    print(
+        "Prices are a zero-drift random walk, so any apparent performance above is noise; "
+        "the Monte Carlo p-values are the check that flags it."
+    )
     data = synthetic_prices(args.seed)
     runners = {f"ma_{n}": toy_runner(n) for n in LOOKBACKS}
     walk_forward = run_walk_forward_validation(data, runners, train_years=3, test_years=1)

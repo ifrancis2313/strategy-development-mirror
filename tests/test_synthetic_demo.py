@@ -14,6 +14,10 @@ def test_demo_is_deterministic_and_labeled(capsys):
     main(["--seed", "42"])
     assert capsys.readouterr().out == first
     assert first.splitlines()[0] == DISCLAIMER
+    assert (
+        "Prices are a zero-drift random walk, so any apparent performance above is noise; "
+        "the Monte Carlo p-values are the check that flags it."
+    ) in first.splitlines()
     assert "Folds: 5" in first
     assert first.count("MCPT ma_") == 3
     if not os.path.isdir(_VENDORED_PYPBO_DIR):

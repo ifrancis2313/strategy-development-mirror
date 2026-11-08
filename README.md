@@ -12,7 +12,7 @@ Still searching for that first strategy validated end-to-end through this pipeli
 python -m examples.synthetic_demo
 ```
 
-After installing the pinned dependencies (see Running it), this offline command runs in under a minute on seeded synthetic prices: a toy moving-average rule, rolling walk-forward folds, and sign-permutation Monte Carlo tests. It writes only to stdout and needs no data files or credentials. Toy observations omit fills and trading costs.
+After installing the pinned dependencies (see Running it), this offline command runs in under a minute on seeded synthetic prices: a toy moving-average rule, rolling walk-forward folds, and sign-permutation Monte Carlo tests. It writes only to stdout and needs no data files or credentials. Toy observations omit fills and trading costs. Prices are a zero-drift random walk, so any apparent performance in its output is noise; the Monte Carlo p-values are the check that flags it.
 
 SYNTHETIC DATA — demonstrates the validation machinery; not a strategy or a result.
 
